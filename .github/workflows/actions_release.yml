@@ -26,3 +26,7 @@ jobs:
     with:
       tag: "${{ github.event.inputs.tag }}"
       node_version: "${{ github.event.inputs.node_version }}"
+      # The shared workflow checks out without submodules and has no input to
+      # change that, so vendor/core would be empty and @core unresolvable. The
+      # script input runs through eval, so the fetch can be prepended here.
+      script: "git submodule update --init && npm run build"
