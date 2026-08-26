@@ -1,0 +1,161 @@
+name: terraform-apply
+description: Apply a Terraform plan that was approved on a pull request
+author: 'step-security'
+
+inputs:
+  # --- what to apply ---
+  path:
+    description: Directory holding the root module to apply. Defaults to the workspace root.
+    required: false
+    default: "."
+  workspace:
+    description: >-
+      Workspace to select before applying. Selection is skipped for backends that
+      take the workspace from the configuration instead.
+    required: false
+    default: "default"
+  label:
+    description: >-
+      Name for the environment this configuration manages, shown in the pull
+      request comment. Must match the label used when the plan was posted, since
+      it forms part of how the comment is identified.
+    required: false
+    default: ""
+
+  # --- variables ---
+  # Both are materialised as auto-loaded tfvars files inside the module, so they
+  # apply to every command. `variables` is written last and therefore wins.
+  variables:
+    description: >-
+      Variable definitions in Terraform syntax, as they would appear in a tfvars
+      file. Overrides anything set by `var_file`.
+    required: false
+  var_file:
+    description: >-
+      Paths to tfvars files, one per line, relative to the workspace. A path that
+      does not exist fails the job rather than being skipped.
+    required: false
+
+  # --- backend ---
+  backend_config:
+    description: >-
+      Backend settings as `key=value`, one per line. Applied after
+      `backend_config_file`, so these take precedence.
+    required: false
+    default: ""
+  backend_config_file:
+    description: >-
+      Paths to backend config files, one per line, relative to the workspace.
+      A path that does not exist fails the job.
+    required: false
+    default: ""
+
+  # --- shaping the plan ---
+  # These change what the plan contains, so they form part of how the pull
+  # request comment is identified. A plan made with different values here will
+  # not match a comment made without them.
+  replace:
+    description: >-
+      Resource addresses to replace rather than update in place, one per line.
+    required: false
+    default: ""
+  target:
+    description: >-
+      Resource addresses to limit the operation to, one per line. Their
+      dependencies are included.
+    required: false
+    default: ""
+  destroy:
+    description: >-
+      Set to `true` to plan and apply the destruction of everything the module
+      manages. Only the exact value `true` enables it.
+    required: false
+    default: "false"
+  refresh:
+    description: >-
+      Set to `false` to skip reconciling state with real resources before
+      planning. Faster, at the cost of planning against state that may be stale.
+    required: false
+    default: "true"
+
+  # --- approval ---
+  plan_path:
+    description: >-
+      Path to a previously saved plan file to apply, relative to the workspace.
+      The file is hashed and checked against the plan approved on the pull
+      request, so only the reviewed plan is applied.
+
+      Skipping plan generation is faster, but a saved plan is a snapshot: it does
+      not reflect anything that changed since, it must be applied in the order it
+      was created, it is not portable between platforms, and it requires matching
+      Terraform and provider versions. It may also contain sensitive values, so
+      it needs storing accordingly.
+
+      Ignored for approval purposes when `auto_approve` is `true`.
+    required: false
+    default: ""
+  auto_approve:
+    description: >-
+      Set to `true` to apply without looking for an approved plan on a pull
+      request. The default requires a plan that was posted to a pull request and
+      reviewed there. Only the exact value `true` enables it, so a typo leaves
+      approval required rather than skipping it.
+    required: false
+    default: "false"
+
+  # --- execution ---
+  parallelism:
+    description: Maximum concurrent operations. Zero leaves the limit to Terraform.
+    required: false
+    default: "0"
+
+outputs:
+  json_plan_path:
+    description: >-
+      Workspace-relative path to the plan in Terraform's JSON format. Not set for
+      backends that cannot save a plan file, such as `remote`. The file contains
+      the plan in full, including sensitive values, so treat it accordingly.
+  text_plan_path:
+    description: >-
+      Workspace-relative path to the plan as text. Not set when a plan was never
+      generated, which happens with `auto_approve` against a backend that cannot
+      save one.
+  failure_reason:
+    description: >-
+      Set when the job failed for a reason worth acting on, so a workflow can tell
+      them apart in an `if:` expression. One of `apply-failed` (the apply itself
+      failed), `plan-changed` (the plan no longer matches the one approved, so
+      nothing was applied), or `state-locked` (the state lock was already held).
+      Left unset for any other failure.
+  failure-reason:
+    description: >-
+      Hyphenated spelling of `failure_reason`, carrying the same value. Both are
+      published so either name can be referenced.
+  lock_info:
+    description: >-
+      Set when `failure_reason` is `state-locked`. A JSON object holding whatever
+      the state backend reported about the lock, typically its `ID`, `Path`,
+      `Operation`, `Who`, `Version` and `Created` fields. May be an empty object
+      when the backend reported no detail.
+  lock-info:
+    description: >-
+      Hyphenated spelling of `lock_info`, carrying the same value. Both are
+      published so either name can be referenced.
+  run_id:
+    description: >-
+      Identifier of the remote run, set only when the module uses the `remote` or
+      `cloud` backend in remote execution mode.
+  json_output_path:
+    description: >-
+      Workspace-relative path to a JSON file holding the root module outputs as a
+      flat name-to-value object. Terraform list, set and tuple types become JSON
+      arrays; map and object types become JSON objects. Sensitive outputs are
+      written in full, so do not publish this file from a public repository.
+
+runs:
+  using: node24
+  main: dist/index.js
+
+branding:
+  icon: globe
+  color: purple

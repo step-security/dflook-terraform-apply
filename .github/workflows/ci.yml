@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+  # dist/ is what actually runs when someone uses this action, so a stale bundle
+  # is invisible until it reaches a consumer. Rebuilding and diffing makes that a
+  # merge-blocking failure instead.
+  check-dist:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - run: npm ci
+
+      - name: Rebuild
+        run: npm run build
+
+      - name: Compare against the committed bundle
+        run: |
+          if ! git diff --exit-code --stat -- dist/; then
+            echo "::error::dist/ does not match src/. Run 'npm run build' and commit the result."
+            exit 1
+          fi

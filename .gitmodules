@@ -1,0 +1,4 @@
+[submodule "vendor/core"]
+	path = vendor/core
+	url = https://github.com/step-security/dflook-terraform-actions-core.git
+	branch = main
