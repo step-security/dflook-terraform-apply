@@ -1,0 +1,21 @@
+{
+  // module/moduleResolution match the core, which is compiled from source
+  // through the @core path mapping below rather than consumed as a package.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@core": ["vendor/core/src/index.ts"],
+      "@core/*": ["vendor/core/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "__tests__/**/*.ts"]
+}
