@@ -1,0 +1,7 @@
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+reason = "braces is a dev dependency and is not used at runtime"
+
+[[IgnoredVulns]]
+id = "GHSA-hp3w-g68c-fv3c"
+reason = "sprintf-js is a dev dependency and is not used at runtime"
